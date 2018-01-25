@@ -62,6 +62,8 @@ def createNewGif(positions):
 
 @app.route('/', methods=['GET'])
 def get():
+    print('Root')
+    print(request)
     return send_from_directory('static', 'index.html')
     # with open('index.html') as file:
         # return file.read()
