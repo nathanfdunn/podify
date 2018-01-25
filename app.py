@@ -64,7 +64,11 @@ def createNewGif(positions):
 def get():
     print('Root')
     print(request)
-    return send_from_directory('static', 'index.html')
+    try:
+        return send_from_directory('static', 'index.html')
+    except Exception as e:
+        print('Exception: ', e)
+        
     # with open('index.html') as file:
         # return file.read()
     # return app.send_static_file('index.html')
