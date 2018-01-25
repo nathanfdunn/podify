@@ -114,6 +114,8 @@ def new_gif():
 # TODO give them unique names
 @app.after_request
 def add_header(r):
+    print('Hey, we got a request')
+    print(r)
     """
     Add headers to both force latest IE rendering engine or Chrome Frame,
     and also to cache the rendered page for 10 minutes.
