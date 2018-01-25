@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	 <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+	<script type="text/javascript">
+		var curFrameIndex = 0;
+		var maxFrameIndex = {{ count - 1 }};
+		// var maxFrameIndex = 38;
+		var positions = new Array(maxFrameIndex).fill(null);	// storing tp
+
+		var timer = null;
+		// var delay = 1000/20;
+		var nativeDelay = {{ average_duration }};
+		var speed = 1.0;
+		var delay = nativeDelay / speed;
+
+		var modeIsPlay = false;
+		var restingPlace;
+		var isBeingDragged = false;
+		var cornerOffset;		// Offset of the gif
+
+		function updateDisplay(){
+			$('.frame').css('display', 'none');
+			$('#frame-' + curFrameIndex).css('display', 'block');
+			
+			if (!isBeingDragged && positions[curFrameIndex]){
+				setPos(positions[curFrameIndex]);
+				// var pos = positions[curFrameIndex] || restingPlace;
+				// setPos(pos);
+				// $('#pod').css('left', pos.left).css('top', pos.top);				
+			}
+		}
+
+		function goToStart(){
+			curFrameIndex = 0;
+			updateDisplay();
+		}
+
+		function goToEnd(){
+			curFrameIndex = maxFrameIndex;
+			updateDisplay();
+		}
+
+		function incIndex(){
+			recordPos();		// might as well I guess?
+			if (curFrameIndex >= maxFrameIndex){
+				if (isBeingDragged){
+					// pause();
+				}
+				else {
+					goToStart();
+				}
+			}
+			else {
+				curFrameIndex++;
+			}
+
+			updateDisplay();
+		}
+
+		function decIndex(){
+			curFrameIndex = Math.max(curFrameIndex - 1, 0);
+			updateDisplay();
+		}
+		
+
+		var countdownInterval = null;
+		var countdown = 3;
+		function play(){
+			$('#play-button').text('Pause');
+			modeIsPlay = true;		// Even if we're in countdown mode, we're still considered being in play mode
+
+			if ($('#chkcountdown').is(':checked') && countdownInterval == null) {
+				countdown = 3;
+				$('#countdown').text(countdown);
+
+				countdownInterval = setInterval(function(){
+					if (countdown <= 0) {
+						timer = setInterval(incIndex, delay);
+						$('#countdown').text('');
+						clearInterval(countdownInterval);
+						countdownInterval = null;
+					}
+					else {
+						countdown--;
+						$('#countdown').text(countdown);
+					}
+				}, 600);
+			}
+			else {
+				timer = setInterval(incIndex, delay);
+			}
+		}
+
+		function pause() {
+			modeIsPlay = false;
+			$('#play-button').text('Play');
+			clearInterval(countdownInterval);
+			countdownInterval = null;
+			$('#countdown').text('');
+
+			clearInterval(timer);
+			timer = null;
+		}
+
+		function togglePlay() {
+			if (modeIsPlay){
+				pause();
+			}
+			else {
+				play();
+			}
+		}
+
+		function getPos() {
+			var rawOffset = $('#pod').offset();
+
+			return {
+				left: rawOffset.left - cornerOffset.left,
+				top: rawOffset.top - cornerOffset.top
+			};			
+		}
+
+		function setPos(rawOffset) {
+			if (!rawOffset)
+				return;		///TODODOO
+			$('#pod').offset({
+				left: rawOffset.left + cornerOffset.left,
+				top: rawOffset.top + cornerOffset.top
+			});
+		}
+
+		function recordPos() {
+			positions[curFrameIndex] = getPos();
+		}
+
+		function createGif(){
+			$.ajax({
+				type: 'POST',
+				url: '/positions',
+				data: JSON.stringify(positions),
+				contentType: 'application/json',
+				success: function(newGifUrl){
+					$('#result').attr('src', newGifUrl);
+					$('#result-link').attr('href', newGifUrl).html('Ready to download!');
+				},
+				failure: function(data){
+					console.log('We failed: '+data);
+				}
+			});
+		}
+
+		function updatePlaybackSpeed(){
+			var sliderValue = $('#speedslider').slider('option', 'value');
+			speed = Math.pow(3, sliderValue).toFixed(1);
+			console.log(speed);
+			delay = nativeDelay / speed;
+			if (modeIsPlay) {
+				pause();
+				play();
+			}
+			$('#currentspeed').text(speed + 'x');
+		}
+
+		function reset(){
+			$('#speedslider').slider('value', 0);
+			updatePlaybackSpeed();
+			
+			positions = new Array(maxFrameIndex).fill(null);	// storing tp
+			pause();
+
+			// TODO Reset position of pod
+		}
+
+		$(document).ready(function (){
+			$(window).keydown(function(e){
+				if (!isBeingDragged){
+					return;
+				}
+
+				switch (e.which){
+					case 32: 			// Space
+						togglePlay();
+						e.preventDefault();
+						break;
+					case 68: 			// D
+						incIndex();
+						e.preventDefault();
+						break;
+					case 70: 			// F
+						decIndex();
+						e.preventDefault();
+						break;
+				}
+			});
+
+			$('#speedslider').slider({
+				value: 0,
+				max: 1,
+				min: -1,
+				step: 0.05,
+				slide: updatePlaybackSpeed,
+				// change: updatePlaybackSpeed
+			});
+
+			var $pod = $('#pod');
+			$pod.draggable({
+				drag: function(e){
+					recordPos();
+				},
+				start: function () {
+					isBeingDragged = true;
+				},
+				stop: function () {
+					isBeingDragged = false;
+				}
+			});
+
+			updateDisplay();
+
+			cornerOffset = $('#frame-' + curFrameIndex).offset();
+
+			restingPlace = getPos();
+		});
+	</script>
+</head>
+<body>
+	<div>
+		{% for name in split %}
+			<img class="frame" style="display:none;" data-index="{{ loop.index0 }}" id="frame-{{ loop.index0 }}" src="{{ name }}">
+		{% endfor %}
+	</div>
+	<button onclick="goToStart()">&lt;&lt;</button>
+	<button onclick="decIndex()">&lt;</button>
+	<button id="play-button" onclick=togglePlay()>Play</button>
+	<button onclick="incIndex()">&gt;</button>
+	<button onclick="goToEnd()">&gt;&gt;</button>
+
+	<br>
+	<br>
+	<!-- <div id="speedslider"></div> -->
+	<label for="speedslider">Playback Speed</label>
+	<div style="width:50%" id="speedslider"></div>
+		
+	<div id="currentspeed">1.0x</div>
+
+
+	<div style="display: none;">
+		<input type="checkbox" id="chkcountdown">
+		<label for="chkcountdown">Countdown</label>
+		<span id="countdown"></span>		
+	</div>
+
+	<br>
+	<br>
+
+
+	<!-- <canvas id="canvas"></canvas> -->
+	<img id="pod" style="width:75px;" src="tidepod.gif">
+
+	<div>While dragging the pod, press space to toggle play/pause, D to go backward a frame, and F to go forward.
+	</div>
+
+	<button onclick="reset()">Reset</button>
+
+	<button onclick="createGif()">Make my gif!</button>
+
+	<a href="/">Home</a>
+	<img src="" id="result">
+	<a href="" id="result-link"></a>
+	<!-- <button>&gt;&gt;</button> -->
+</body>
+</html>

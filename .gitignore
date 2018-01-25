@@ -1,0 +1,6 @@
+venv/
+frames/
+temp/
+.idea/
+static/
+results/
