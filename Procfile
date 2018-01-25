@@ -1,1 +1,1 @@
-web: gunicorn fbchessbot:app
+web: gunicorn app:app
