@@ -132,5 +132,7 @@ def add_header(r):
     r.headers['Cache-Control'] = 'public, max-age=0'
     return r
 
+port = int(os.environ.get('PORT', 5000))
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', extra_files=['*'])
+    app.run(debug=True, host='0.0.0.0', port=port, extra_files=['*'])
