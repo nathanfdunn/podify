@@ -5,7 +5,7 @@ import glob
 import time
 from collections import namedtuple
 
-app = Flask('tidepodchallenge', static_url_path='')
+app = Flask('app', static_url_path='')
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -68,7 +68,7 @@ def get():
         return send_from_directory('static', 'index.html')
     except Exception as e:
         print('Exception: ', e)
-        
+
     # with open('index.html') as file:
         # return file.read()
     # return app.send_static_file('index.html')
