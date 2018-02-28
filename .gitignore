@@ -4,3 +4,4 @@ temp/
 .idea/
 static/
 results/
+__pycache__/
